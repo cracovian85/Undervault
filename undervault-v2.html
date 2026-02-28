@@ -1,0 +1,1373 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UNDERVAULT v2 — Advanced Stock Signal Scanner</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Syne+Mono&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;1,9..144,300&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #04070d;
+  --bg2: #07101a;
+  --surface: #0b1622;
+  --surface2: #0f1e2e;
+  --border: #162438;
+  --border2: #1e3550;
+  --accent: #0af0ff;
+  --accent-glow: rgba(10,240,255,0.15);
+  --amber: #ffb830;
+  --amber-glow: rgba(255,184,48,0.15);
+  --green: #39ff8a;
+  --green-glow: rgba(57,255,138,0.12);
+  --red: #ff4d6d;
+  --text: #c8d8e8;
+  --text2: #7a95ae;
+  --muted: #3d5a72;
+  --white: #e8f4ff;
+  --font-display: 'Syne', sans-serif;
+  --font-mono: 'Syne Mono', monospace;
+  --font-body: 'Fraunces', serif;
+}
+
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-mono);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* BG EFFECTS */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 60% 40% at 20% 0%, rgba(10,240,255,0.04) 0%, transparent 60%),
+    radial-gradient(ellipse 40% 50% at 80% 100%, rgba(255,184,48,0.03) 0%, transparent 60%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(10,240,255,0.015) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(10,240,255,0.015) 1px, transparent 1px);
+  background-size: 48px 48px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.wrap { max-width: 1440px; margin: 0 auto; padding: 0 32px; position: relative; z-index: 1; }
+
+/* ========== HEADER ========== */
+.header {
+  padding: 32px 0 24px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.logo-group { display: flex; flex-direction: column; }
+
+.logo {
+  font-family: var(--font-display);
+  font-size: clamp(44px, 6vw, 80px);
+  font-weight: 800;
+  line-height: 0.9;
+  letter-spacing: -2px;
+  color: var(--white);
+}
+
+.logo em {
+  font-style: normal;
+  color: var(--accent);
+  text-shadow: 0 0 40px rgba(10,240,255,0.6), 0 0 80px rgba(10,240,255,0.2);
+}
+
+.logo-sub {
+  font-size: 10px;
+  letter-spacing: 5px;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-top: 10px;
+}
+
+.header-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.live-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  letter-spacing: 2px;
+  color: var(--accent);
+  padding: 6px 14px;
+  border: 1px solid rgba(10,240,255,0.25);
+  background: var(--accent-glow);
+}
+
+.live-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--accent);
+  animation: blink 2s infinite;
+}
+
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+.header-clock { font-size: 13px; color: var(--text2); letter-spacing: 1px; }
+
+/* ========== CONTROL PANEL ========== */
+.control-panel {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  border: 1px solid var(--border);
+  margin-top: 28px;
+  background: var(--surface);
+}
+
+.panel-col {
+  padding: 24px 28px;
+  border-right: 1px solid var(--border);
+}
+.panel-col:last-child { border-right: none; }
+
+.panel-label {
+  font-size: 9px;
+  letter-spacing: 5px;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.panel-label::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+/* SOURCE CHIPS */
+.sources-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.src-chip {
+  cursor: pointer;
+  padding: 8px 16px;
+  border: 1px solid var(--border2);
+  background: transparent;
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  color: var(--text2);
+  transition: all 0.18s;
+  position: relative;
+  user-select: none;
+}
+
+.src-chip:hover { border-color: var(--text2); color: var(--text); }
+
+.src-chip.on {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-glow);
+  box-shadow: 0 0 16px rgba(10,240,255,0.08);
+}
+
+.src-chip .src-dot {
+  display: inline-block;
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
+/* ========== KEYWORDS PANEL ========== */
+.keywords-section {
+  border: 1px solid var(--border);
+  border-top: none;
+  background: var(--surface);
+}
+
+.kw-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+}
+
+.kw-tab {
+  flex: 1;
+  padding: 14px 20px;
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  cursor: pointer;
+  border-right: 1px solid var(--border);
+  color: var(--text2);
+  text-align: center;
+  transition: all 0.18s;
+  user-select: none;
+}
+
+.kw-tab:last-child { border-right: none; }
+
+.kw-tab.active { color: var(--white); background: rgba(255,255,255,0.03); }
+
+.kw-tab[data-cat="value"].active { border-bottom: 2px solid var(--green); color: var(--green); }
+.kw-tab[data-cat="sentiment"].active { border-bottom: 2px solid var(--amber); color: var(--amber); }
+.kw-tab[data-cat="catalyst"].active { border-bottom: 2px solid var(--accent); color: var(--accent); }
+.kw-tab[data-cat="all"].active { border-bottom: 2px solid var(--white); }
+
+.kw-body {
+  padding: 20px 28px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-height: 90px;
+}
+
+.kw-chip {
+  cursor: pointer;
+  padding: 6px 13px;
+  border: 1px solid var(--border2);
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  color: var(--text2);
+  transition: all 0.15s;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.kw-chip:hover { color: var(--text); border-color: var(--text2); }
+
+.kw-chip.on[data-cat="value"]     { border-color: var(--green);  color: var(--green);  background: var(--green-glow); }
+.kw-chip.on[data-cat="sentiment"] { border-color: var(--amber);  color: var(--amber);  background: var(--amber-glow); }
+.kw-chip.on[data-cat="catalyst"]  { border-color: var(--accent); color: var(--accent); background: var(--accent-glow); }
+
+.kw-select-all {
+  font-size: 10px; letter-spacing: 2px; cursor: pointer;
+  color: var(--muted); padding: 6px 10px; border: 1px dashed var(--border2);
+  transition: color 0.15s;
+}
+.kw-select-all:hover { color: var(--text2); }
+
+/* ========== FILTERS ROW ========== */
+.filters-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 0;
+  border: 1px solid var(--border);
+  border-top: none;
+  background: var(--surface);
+}
+
+.filter-group {
+  padding: 20px 28px;
+  border-right: 1px solid var(--border);
+}
+
+.filter-group:last-child { border-right: none; }
+
+.filter-label {
+  font-size: 9px;
+  letter-spacing: 4px;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+
+.period-btns, .country-scroll {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.period-btn, .country-btn {
+  cursor: pointer;
+  padding: 6px 14px;
+  border: 1px solid var(--border2);
+  font-size: 11px;
+  color: var(--text2);
+  transition: all 0.15s;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.period-btn:hover, .country-btn:hover { border-color: var(--text2); color: var(--text); }
+
+.period-btn.on {
+  border-color: var(--amber);
+  color: var(--amber);
+  background: var(--amber-glow);
+}
+
+.country-btn.on {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-glow);
+}
+
+.results-per-site {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.rps-btn {
+  cursor: pointer;
+  width: 38px; height: 38px;
+  display: grid; place-items: center;
+  border: 1px solid var(--border2);
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text2);
+  transition: all 0.15s;
+  user-select: none;
+}
+
+.rps-btn.on {
+  border-color: var(--green);
+  color: var(--green);
+  background: var(--green-glow);
+}
+
+/* ========== SCAN BUTTON ========== */
+.scan-launch {
+  border: 1px solid var(--border);
+  border-top: none;
+  padding: 24px 28px;
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  background: var(--bg2);
+  flex-wrap: wrap;
+}
+
+.scan-btn {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  padding: 16px 48px;
+  background: var(--accent);
+  color: var(--bg);
+  border: none;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.scan-btn::after {
+  content: '';
+  position: absolute;
+  top: 0; left: -100%;
+  width: 50%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+  transform: skewX(-20deg);
+  transition: left 0.5s;
+}
+
+.scan-btn:hover::after { left: 150%; }
+.scan-btn:hover { box-shadow: 0 0 40px rgba(10,240,255,0.4); }
+.scan-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.scan-summary {
+  font-size: 11px;
+  color: var(--text2);
+  line-height: 2;
+}
+
+.scan-summary strong { color: var(--accent); }
+.scan-summary .s-amber { color: var(--amber); }
+.scan-summary .s-green { color: var(--green); }
+
+/* ========== PROGRESS ========== */
+.progress-bar-outer {
+  height: 2px;
+  background: var(--border);
+  position: relative;
+  overflow: hidden;
+}
+
+.progress-bar-inner {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--green));
+  box-shadow: 0 0 12px var(--accent);
+  width: 0%;
+  transition: width 0.4s ease;
+}
+
+.progress-bar-shimmer {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(10,240,255,0.3), transparent);
+  background-size: 200% 100%;
+  animation: scanline 1.5s linear infinite;
+}
+
+@keyframes scanline { 0%{background-position:-100% 0} 100%{background-position:200% 0} }
+
+.log-panel {
+  border: 1px solid var(--border);
+  border-top: none;
+  background: var(--bg);
+  padding: 14px 28px;
+  display: none;
+}
+
+.log-panel.show { display: block; }
+
+.log-inner {
+  max-height: 100px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.log-line {
+  font-size: 10px;
+  color: var(--muted);
+  line-height: 1.7;
+  animation: logIn 0.25s ease;
+}
+
+@keyframes logIn { from{opacity:0;transform:translateX(-6px)} to{opacity:1;transform:translateX(0)} }
+
+.log-line .lt { color: var(--text2); margin-right: 8px; }
+.log-line.ok .lt { color: var(--green); }
+.log-line.err .lt { color: var(--red); }
+.log-line.info .lt { color: var(--accent); }
+
+/* ========== RESULTS ========== */
+.results-zone { margin-top: 40px; }
+
+.results-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.results-title {
+  font-family: var(--font-display);
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: -1px;
+  color: var(--white);
+}
+
+.results-badge {
+  font-size: 10px;
+  letter-spacing: 3px;
+  color: var(--text2);
+  padding: 8px 16px;
+  border: 1px solid var(--border2);
+}
+
+/* SITE RESULT BLOCK */
+.site-result {
+  margin-bottom: 28px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  animation: blockIn 0.4s ease;
+}
+
+@keyframes blockIn {
+  from{opacity:0;transform:translateY(16px)}
+  to{opacity:1;transform:translateY(0)}
+}
+
+.site-result-head {
+  padding: 18px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border);
+  background: rgba(255,255,255,0.015);
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.site-name-group { display: flex; flex-direction: column; gap: 3px; }
+
+.site-name {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--white);
+  letter-spacing: 0.5px;
+}
+
+.site-meta {
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 1px;
+}
+
+.site-badges { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+.badge {
+  font-size: 9px;
+  letter-spacing: 2px;
+  padding: 4px 10px;
+  text-transform: uppercase;
+}
+
+.badge-green  { border: 1px solid rgba(57,255,138,0.35);  color: var(--green);  background: var(--green-glow); }
+.badge-amber  { border: 1px solid rgba(255,184,48,0.35);  color: var(--amber);  background: var(--amber-glow); }
+.badge-accent { border: 1px solid rgba(10,240,255,0.35);  color: var(--accent); background: var(--accent-glow); }
+.badge-red    { border: 1px solid rgba(255,77,109,0.3);   color: var(--red);    background: rgba(255,77,109,0.08); }
+
+/* STOCK CARDS */
+.stocks-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+}
+
+.stock-card {
+  padding: 24px 26px;
+  border-right: 1px solid var(--border);
+  position: relative;
+  transition: background 0.2s;
+}
+
+.stock-card:last-child { border-right: none; }
+.stock-card:hover { background: rgba(10,240,255,0.02); }
+
+.stock-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0;
+  width: 3px; height: 0;
+  background: var(--accent);
+  transition: height 0.3s ease;
+}
+
+.stock-card:hover::before { height: 100%; }
+
+.card-rank {
+  font-size: 9px;
+  letter-spacing: 4px;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+
+.card-ticker {
+  font-family: var(--font-display);
+  font-size: 36px;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--amber);
+  text-shadow: 0 0 24px rgba(255,184,48,0.35);
+  letter-spacing: -1px;
+}
+
+.card-company {
+  font-family: var(--font-body);
+  font-style: italic;
+  font-size: 14px;
+  color: var(--text);
+  margin: 5px 0 14px;
+  opacity: 0.85;
+}
+
+.card-reason {
+  font-size: 11px;
+  color: var(--text2);
+  line-height: 1.8;
+  border-left: 2px solid var(--border2);
+  padding-left: 12px;
+  margin-bottom: 14px;
+}
+
+.card-signals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.signal-tag {
+  font-size: 9px;
+  padding: 3px 8px;
+  letter-spacing: 1px;
+  border: 1px solid;
+}
+
+.signal-tag.value    { border-color: rgba(57,255,138,0.3);  color: var(--green);  background: var(--green-glow); }
+.signal-tag.sentiment{ border-color: rgba(255,184,48,0.3);  color: var(--amber);  background: var(--amber-glow); }
+.signal-tag.catalyst { border-color: rgba(10,240,255,0.3);  color: var(--accent); background: var(--accent-glow); }
+
+.card-metrics {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.metric { display: flex; flex-direction: column; gap: 3px; }
+.metric-k { font-size: 8px; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; }
+.metric-v { font-size: 13px; color: var(--text); }
+.metric-v.up   { color: var(--green); }
+.metric-v.down { color: var(--red); }
+.metric-v.neu  { color: var(--amber); }
+
+/* ERROR STATE */
+.site-error {
+  padding: 20px 24px;
+  border-left: 3px solid var(--red);
+  font-size: 11px;
+  color: var(--red);
+  background: rgba(255,77,109,0.04);
+}
+
+/* EMPTY STATE */
+.empty-state {
+  text-align: center;
+  padding: 100px 24px;
+  color: var(--muted);
+}
+
+.empty-state .big {
+  font-family: var(--font-display);
+  font-size: clamp(48px, 8vw, 100px);
+  font-weight: 800;
+  opacity: 0.07;
+  letter-spacing: -2px;
+  line-height: 1;
+  margin-bottom: 24px;
+}
+
+.empty-state p { font-size: 13px; color: var(--text2); line-height: 2; }
+
+/* FOOTER */
+footer {
+  border-top: 1px solid var(--border);
+  padding: 28px 0;
+  margin-top: 60px;
+  font-size: 10px;
+  color: var(--muted);
+  line-height: 2.2;
+  text-align: center;
+  letter-spacing: 0.5px;
+}
+
+/* SCROLLBAR */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border2); }
+
+/* KEYWORD COUNT BADGE */
+.kw-count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px; height: 18px;
+  border-radius: 9px;
+  background: var(--accent);
+  color: var(--bg);
+  font-size: 9px;
+  font-weight: 700;
+  margin-left: 6px;
+  padding: 0 5px;
+}
+
+.progress-wrap {
+  border: 1px solid var(--border);
+  border-top: none;
+  background: var(--bg2);
+  padding: 10px 28px 12px;
+  display: none;
+}
+
+.progress-wrap.show { display: block; }
+
+.progress-top {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: var(--text2);
+  margin-bottom: 8px;
+}
+
+/* ========== RESPONSIVE ========== */
+@media (max-width: 900px) {
+  .control-panel { grid-template-columns: 1fr; }
+  .panel-col { border-right: none; border-bottom: 1px solid var(--border); }
+  .filters-row { grid-template-columns: 1fr 1fr; }
+  .stocks-row { grid-template-columns: 1fr; }
+  .stock-card { border-right: none; border-bottom: 1px solid var(--border); }
+}
+
+@media (max-width: 600px) {
+  .wrap { padding: 0 16px; }
+  .filters-row { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- HEADER -->
+<header class="header">
+  <div class="logo-group">
+    <div class="logo">UNDER<em>VAULT</em></div>
+    <div class="logo-sub">Advanced Signal Scanner · Multi-Source · Real-Time</div>
+  </div>
+  <div class="header-right">
+    <div class="live-pill"><span class="live-dot"></span>LIVE SCANNING</div>
+    <div class="header-clock" id="hclock">--:--:-- KST</div>
+  </div>
+</header>
+
+<!-- CONTROL PANEL: Sources + Results per site -->
+<div class="control-panel">
+  <div class="panel-col">
+    <div class="panel-label">01 · 검색 사이트</div>
+    <div class="sources-row" id="sources-row">
+      <!-- injected by JS -->
+    </div>
+  </div>
+  <div class="panel-col">
+    <div class="panel-label">02 · 사이트당 종목 수</div>
+    <div class="results-per-site" id="rps-row">
+      <div class="rps-btn on" data-v="3">3</div>
+      <div class="rps-btn" data-v="5">5</div>
+      <div class="rps-btn" data-v="7">7</div>
+      <div class="rps-btn" data-v="10">10</div>
+    </div>
+  </div>
+</div>
+
+<!-- KEYWORDS PANEL -->
+<div class="keywords-section">
+  <div class="kw-tabs">
+    <div class="kw-tab active" data-cat="all">All</div>
+    <div class="kw-tab" data-cat="value">📈 실적/밸류</div>
+    <div class="kw-tab" data-cat="sentiment">💰 수급/심리</div>
+    <div class="kw-tab" data-cat="catalyst">🚀 촉매</div>
+  </div>
+  <div class="kw-body" id="kw-body">
+    <!-- injected by JS -->
+  </div>
+</div>
+
+<!-- FILTERS ROW -->
+<div class="filters-row">
+  <div class="filter-group">
+    <div class="filter-label">03 · 검색 기간</div>
+    <div class="period-btns" id="period-btns">
+      <div class="period-btn" data-v="1w">최근 1주일</div>
+      <div class="period-btn on" data-v="2w">최근 2주일</div>
+      <div class="period-btn" data-v="1m">최근 1달</div>
+      <div class="period-btn" data-v="3m">최근 3달</div>
+    </div>
+  </div>
+  <div class="filter-group" style="grid-column: span 2;">
+    <div class="filter-label">04 · 국가/시장</div>
+    <div class="country-scroll" id="country-btns">
+      <!-- injected by JS -->
+    </div>
+  </div>
+</div>
+
+<!-- SCAN LAUNCH -->
+<div class="scan-launch">
+  <button class="scan-btn" id="scan-btn" onclick="startScan()">⟶ SCAN</button>
+  <div class="scan-summary" id="scan-summary">
+    준비중…
+  </div>
+</div>
+
+<!-- PROGRESS BAR -->
+<div class="progress-wrap" id="progress-wrap">
+  <div class="progress-top">
+    <span id="prog-label">스캔 중...</span>
+    <span id="prog-pct">0%</span>
+  </div>
+  <div class="progress-bar-outer">
+    <div class="progress-bar-inner" id="prog-bar"></div>
+    <div class="progress-bar-shimmer" id="prog-shimmer"></div>
+  </div>
+</div>
+
+<!-- LOG -->
+<div class="log-panel" id="log-panel">
+  <div class="log-inner" id="log-inner"></div>
+</div>
+
+<!-- RESULTS -->
+<div class="results-zone">
+  <div class="results-header-row">
+    <div class="results-title">SIGNAL RESULTS</div>
+    <div class="results-badge" id="res-badge">스캔 대기 중</div>
+  </div>
+  <div id="results-container">
+    <div class="empty-state">
+      <div class="big">SIGNAL</div>
+      <p>필터를 설정하고 SCAN 버튼을 누르세요.<br>
+         Claude AI가 선택한 사이트에서 저평가 신호 종목을 실시간으로 수집합니다.</p>
+    </div>
+  </div>
+</div>
+
+<footer>
+  ⚠ 본 앱은 교육 및 정보 제공 목적으로만 사용되며, 투자 조언이 아닙니다. 모든 투자 결정은 본인의 책임이며 전문가 상담을 권장합니다.<br>
+  UNDERVAULT v2 · Powered by Anthropic Claude + Web Search · Data from Reuters, Bloomberg, Seeking Alpha, MarketWatch
+</footer>
+</div>
+
+<script>
+// ===================================================
+// CONFIG
+// ===================================================
+const SOURCES_CONFIG = [
+  { id: 'reuters',      name: 'Reuters',       url: 'reuters.com',        color: 'accent' },
+  { id: 'bloomberg',    name: 'Bloomberg',      url: 'bloomberg.com',       color: 'amber'  },
+  { id: 'seekingalpha', name: 'Seeking Alpha',  url: 'seekingalpha.com',    color: 'green'  },
+  { id: 'marketwatch',  name: 'MarketWatch',    url: 'marketwatch.com',     color: 'accent' },
+];
+
+const KEYWORDS = [
+  // value
+  { id: 'earnings_beat',        label: 'earnings beat',         cat: 'value' },
+  { id: 'raised_guidance',      label: 'raised guidance',        cat: 'value' },
+  { id: 'forward_pe_discount',  label: 'forward P/E discount',   cat: 'value' },
+  { id: 'margin_expansion',     label: 'margin expansion',       cat: 'value' },
+  { id: 'free_cash_flow',       label: 'free cash flow',         cat: 'value' },
+  // sentiment
+  { id: 'analyst_upgrade',      label: 'analyst upgrade',        cat: 'sentiment' },
+  { id: 'price_target_raised',  label: 'price target raised',    cat: 'sentiment' },
+  { id: 'sector_rotation',      label: 'sector rotation',        cat: 'sentiment' },
+  { id: 'overreaction',         label: 'overreaction',           cat: 'sentiment' },
+  { id: 'selloff_excessive',    label: 'sell-off excessive',      cat: 'sentiment' },
+  // catalyst
+  { id: 'upcoming_catalyst',    label: 'upcoming catalyst',      cat: 'catalyst' },
+  { id: 'product_launch',       label: 'product launch',         cat: 'catalyst' },
+  { id: 'fda_decision',         label: 'FDA decision',           cat: 'catalyst' },
+  { id: 'contract_award',       label: 'contract award',         cat: 'catalyst' },
+  { id: 'buyback_authorization',label: 'buyback authorization',  cat: 'catalyst' },
+  { id: 'insider_buying',       label: 'insider buying',         cat: 'catalyst' },
+];
+
+const PERIODS = [
+  { v: '1w',  label: '최근 1주일',  days: 7  },
+  { v: '2w',  label: '최근 2주일',  days: 14 },
+  { v: '1m',  label: '최근 1달',    days: 30 },
+  { v: '3m',  label: '최근 3달',    days: 90 },
+];
+
+const COUNTRIES = [
+  { v: 'worldwide', label: '🌍 Worldwide' },
+  { v: 'US',        label: '🇺🇸 US' },
+  { v: 'Korea',     label: '🇰🇷 Korea' },
+  { v: 'China',     label: '🇨🇳 China' },
+  { v: 'Japan',     label: '🇯🇵 Japan' },
+  { v: 'India',     label: '🇮🇳 India' },
+  { v: 'UK',        label: '🇬🇧 UK' },
+  { v: 'Germany',   label: '🇩🇪 Germany' },
+  { v: 'Brazil',    label: '🇧🇷 Brazil' },
+  { v: 'Taiwan',    label: '🇹🇼 Taiwan' },
+  { v: 'Australia', label: '🇦🇺 Australia' },
+  { v: 'Canada',    label: '🇨🇦 Canada' },
+  { v: 'Vietnam',   label: '🇻🇳 Vietnam' },
+  { v: 'Singapore', label: '🇸🇬 Singapore' },
+];
+
+// ===================================================
+// STATE
+// ===================================================
+let state = {
+  sources:   new Set(SOURCES_CONFIG.map(s => s.id)),
+  keywords:  new Set(KEYWORDS.map(k => k.id)),
+  period:    '2w',
+  countries: new Set(['worldwide']),
+  rps:       3,
+  scanning:  false,
+  kwTab:     'all',
+};
+
+// ===================================================
+// INIT
+// ===================================================
+function init() {
+  renderSources();
+  renderKeywords();
+  renderPeriods();
+  renderCountries();
+  renderRPS();
+  updateSummary();
+  startClock();
+}
+
+function startClock() {
+  const tick = () => {
+    document.getElementById('hclock').textContent =
+      new Date().toLocaleTimeString('ko-KR') + ' KST';
+  };
+  tick();
+  setInterval(tick, 1000);
+}
+
+// ===================================================
+// RENDER SOURCES
+// ===================================================
+function renderSources() {
+  const row = document.getElementById('sources-row');
+  row.innerHTML = '';
+  SOURCES_CONFIG.forEach(src => {
+    const el = document.createElement('div');
+    el.className = 'src-chip' + (state.sources.has(src.id) ? ' on' : '');
+    el.id = 'src-' + src.id;
+    el.innerHTML = `<span class="src-dot"></span>${src.name}`;
+    el.onclick = () => {
+      toggle(state.sources, src.id);
+      el.classList.toggle('on', state.sources.has(src.id));
+      updateSummary();
+    };
+    row.appendChild(el);
+  });
+}
+
+// ===================================================
+// RENDER KEYWORDS
+// ===================================================
+function renderKeywords() {
+  const body = document.getElementById('kw-body');
+  const tab = state.kwTab;
+  const filtered = tab === 'all' ? KEYWORDS : KEYWORDS.filter(k => k.cat === tab);
+
+  body.innerHTML = '';
+
+  // Select all / none
+  const selectAll = document.createElement('div');
+  selectAll.className = 'kw-select-all';
+  selectAll.textContent = '전체 선택/해제';
+  selectAll.onclick = () => {
+    const allOn = filtered.every(k => state.keywords.has(k.id));
+    filtered.forEach(k => allOn ? state.keywords.delete(k.id) : state.keywords.add(k.id));
+    renderKeywords();
+    updateSummary();
+  };
+  body.appendChild(selectAll);
+
+  filtered.forEach(kw => {
+    const el = document.createElement('div');
+    el.className = `kw-chip${state.keywords.has(kw.id) ? ' on' : ''}`;
+    el.dataset.cat = kw.cat;
+    el.textContent = kw.label;
+    el.onclick = () => {
+      toggle(state.keywords, kw.id);
+      el.classList.toggle('on', state.keywords.has(kw.id));
+      updateSummary();
+    };
+    body.appendChild(el);
+  });
+
+  // Update tab badges
+  document.querySelectorAll('.kw-tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.cat === tab);
+  });
+}
+
+document.querySelectorAll && document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('.kw-tab').forEach(t => {
+    t.addEventListener('click', () => {
+      state.kwTab = t.dataset.cat;
+      renderKeywords();
+    });
+  });
+});
+
+// ===================================================
+// RENDER PERIODS
+// ===================================================
+function renderPeriods() {
+  const container = document.getElementById('period-btns');
+  container.innerHTML = '';
+  PERIODS.forEach(p => {
+    const el = document.createElement('div');
+    el.className = 'period-btn' + (state.period === p.v ? ' on' : '');
+    el.dataset.v = p.v;
+    el.textContent = p.label;
+    el.onclick = () => {
+      state.period = p.v;
+      container.querySelectorAll('.period-btn').forEach(b => b.classList.toggle('on', b.dataset.v === p.v));
+      updateSummary();
+    };
+    container.appendChild(el);
+  });
+}
+
+// ===================================================
+// RENDER COUNTRIES
+// ===================================================
+function renderCountries() {
+  const container = document.getElementById('country-btns');
+  container.innerHTML = '';
+  COUNTRIES.forEach(c => {
+    const el = document.createElement('div');
+    el.className = 'country-btn' + (state.countries.has(c.v) ? ' on' : '');
+    el.dataset.v = c.v;
+    el.textContent = c.label;
+    el.onclick = () => {
+      if (c.v === 'worldwide') {
+        state.countries.clear();
+        state.countries.add('worldwide');
+      } else {
+        state.countries.delete('worldwide');
+        toggle(state.countries, c.v);
+        if (state.countries.size === 0) state.countries.add('worldwide');
+      }
+      container.querySelectorAll('.country-btn').forEach(b =>
+        b.classList.toggle('on', state.countries.has(b.dataset.v))
+      );
+      updateSummary();
+    };
+    container.appendChild(el);
+  });
+}
+
+// ===================================================
+// RENDER RPS
+// ===================================================
+function renderRPS() {
+  document.querySelectorAll('.rps-btn').forEach(btn => {
+    btn.classList.toggle('on', parseInt(btn.dataset.v) === state.rps);
+    btn.onclick = () => {
+      state.rps = parseInt(btn.dataset.v);
+      document.querySelectorAll('.rps-btn').forEach(b => b.classList.toggle('on', b === btn));
+      updateSummary();
+    };
+  });
+}
+
+// ===================================================
+// SUMMARY
+// ===================================================
+function updateSummary() {
+  const srcCount = state.sources.size;
+  const kwCount  = state.keywords.size;
+  const period   = PERIODS.find(p => p.v === state.period)?.label || '';
+  const countries = [...state.countries].join(', ');
+  const total = srcCount * state.rps;
+
+  document.getElementById('scan-summary').innerHTML =
+    `<strong>${srcCount}</strong>개 사이트 &nbsp;·&nbsp; ` +
+    `<span class="s-green">${kwCount}</span>개 키워드 &nbsp;·&nbsp; ` +
+    `<span class="s-amber">${period}</span> &nbsp;·&nbsp; ` +
+    `<strong>${countries}</strong><br>` +
+    `예상 결과: 최대 <strong>${total}</strong>개 종목`;
+}
+
+// ===================================================
+// HELPERS
+// ===================================================
+function toggle(set, val) {
+  set.has(val) ? set.delete(val) : set.add(val);
+}
+
+function getPeriodDates(periodV) {
+  const days = PERIODS.find(p => p.v === periodV)?.days || 14;
+  const to = new Date();
+  const from = new Date(Date.now() - days * 86400000);
+  return {
+    from: from.toISOString().split('T')[0],
+    to:   to.toISOString().split('T')[0],
+    days,
+  };
+}
+
+// ===================================================
+// LOGGING
+// ===================================================
+function addLog(msg, type = '') {
+  const panel = document.getElementById('log-panel');
+  const inner = document.getElementById('log-inner');
+  panel.classList.add('show');
+  const line = document.createElement('div');
+  line.className = `log-line ${type}`;
+  line.innerHTML = `<span class="lt">[${new Date().toLocaleTimeString('ko-KR')}]</span> ${msg}`;
+  inner.appendChild(line);
+  inner.scrollTop = inner.scrollHeight;
+}
+
+function setProgress(pct, label) {
+  document.getElementById('prog-bar').style.width = pct + '%';
+  document.getElementById('prog-pct').textContent = Math.round(pct) + '%';
+  if (label) document.getElementById('prog-label').textContent = label;
+}
+
+// ===================================================
+// CLAUDE API
+// ===================================================
+async function fetchForSource(source) {
+  const { from, to, days } = getPeriodDates(state.period);
+  const kwLabels = KEYWORDS.filter(k => state.keywords.has(k.id)).map(k => k.label);
+  const countriesList = [...state.countries].join(', ');
+  const rps = state.rps;
+
+  // Build keyword string grouped by category
+  const valueKw     = kwLabels.filter(l => KEYWORDS.find(k=>k.label===l && k.cat==='value'));
+  const sentimentKw = kwLabels.filter(l => KEYWORDS.find(k=>k.label===l && k.cat==='sentiment'));
+  const catalystKw  = kwLabels.filter(l => KEYWORDS.find(k=>k.label===l && k.cat==='catalyst'));
+
+  const prompt = `You are a professional equity research analyst. Your task is to identify undervalued stocks mentioned on ${source.name} (${source.url}) in the last ${days} days (${from} to ${to}).
+
+SEARCH PARAMETERS:
+- Source: ${source.name} (${source.url})
+- Time range: ${from} to ${to} (last ${days} days)
+- Target markets: ${countriesList}
+- Number of stocks to find: EXACTLY ${rps}
+
+KEY SIGNAL KEYWORDS to search for (use combinations of these in your web search):
+📈 Value signals: ${valueKw.join(', ') || 'N/A'}
+💰 Sentiment signals: ${sentimentKw.join(', ') || 'N/A'}  
+🚀 Catalyst signals: ${catalystKw.join(', ') || 'N/A'}
+
+INSTRUCTIONS:
+1. Search ${source.url} for recent articles mentioning these signal keywords
+2. Find ${rps} specific stocks that appear undervalued based on the signals above
+3. For market filter "${countriesList}": only include stocks from those markets/exchanges
+4. Prioritize stocks where MULTIPLE signal types are present (e.g., earnings beat + analyst upgrade + buyback)
+
+For each stock provide:
+- ticker: Exchange:symbol format (e.g., NASDAQ:AAPL, KRX:005930)
+- name: Full company name
+- country: Country/Market
+- reason: 2-3 sentence analysis combining the signals found (mention specific keywords that triggered)
+- signals: array of matched keywords from the list above (max 4)
+- pe_ratio: if mentioned
+- price_target: analyst target if mentioned
+- upside: upside percentage if calculable
+- source_article: brief article title or topic from ${source.name}
+
+Respond ONLY in this exact JSON (no markdown fences, no text outside):
+{
+  "source": "${source.name}",
+  "period": "${from} ~ ${to}",
+  "country_filter": "${countriesList}",
+  "stocks": [
+    {
+      "ticker": "NASDAQ:AAPL",
+      "name": "Apple Inc.",
+      "country": "US",
+      "reason": "...",
+      "signals": ["earnings beat", "analyst upgrade"],
+      "pe_ratio": "24.5",
+      "price_target": "$220",
+      "upside": "+18%",
+      "source_article": "..."
+    }
+  ]
+}`;
+
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 1500,
+      tools: [{ type: "web_search_20250305", name: "web_search" }],
+      messages: [{ role: "user", content: prompt }]
+    })
+  });
+
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const data = await res.json();
+
+  const textBlocks = (data.content || []).filter(b => b.type === 'text');
+  const fullText = textBlocks.map(b => b.text).join('');
+
+  // Try to extract JSON
+  const match = fullText.match(/\{[\s\S]*"stocks"[\s\S]*\}/);
+  if (!match) throw new Error('응답에서 JSON 추출 실패');
+  return JSON.parse(match[0]);
+}
+
+// ===================================================
+// RENDER RESULT BLOCK
+// ===================================================
+function renderResult(source, data, err = null) {
+  const container = document.getElementById('results-container');
+  const emptyState = container.querySelector('.empty-state');
+  if (emptyState) emptyState.remove();
+
+  const existing = document.getElementById('result-' + source.id);
+  if (existing) existing.remove();
+
+  const block = document.createElement('div');
+  block.className = 'site-result';
+  block.id = 'result-' + source.id;
+
+  if (err) {
+    block.innerHTML = `
+      <div class="site-result-head">
+        <div class="site-name-group">
+          <div class="site-name">${source.name}</div>
+          <div class="site-meta">${source.url}</div>
+        </div>
+        <span class="badge badge-red">SCAN FAILED</span>
+      </div>
+      <div class="site-error">⚠ ${err}</div>`;
+    container.appendChild(block);
+    return;
+  }
+
+  const stocks = data.stocks || [];
+  const period = data.period || '';
+  const countryF = data.country_filter || '';
+
+  const stocksHtml = stocks.map((s, i) => {
+    const signalTags = (s.signals || []).map(sig => {
+      const kwObj = KEYWORDS.find(k => k.label === sig);
+      const cat = kwObj ? kwObj.cat : 'value';
+      return `<span class="signal-tag ${cat}">${sig}</span>`;
+    }).join('');
+
+    const metrics = [];
+    if (s.pe_ratio)     metrics.push({ k: 'P/E',     v: s.pe_ratio,     cls: 'neu' });
+    if (s.price_target) metrics.push({ k: '목표가',   v: s.price_target, cls: 'up'  });
+    if (s.upside)       metrics.push({ k: 'Upside',  v: s.upside,       cls: s.upside.startsWith('-') ? 'down' : 'up' });
+    if (s.country)      metrics.push({ k: '시장',    v: s.country,      cls: '' });
+
+    const metricsHtml = metrics.map(m =>
+      `<div class="metric"><span class="metric-k">${m.k}</span><span class="metric-v ${m.cls}">${m.v}</span></div>`
+    ).join('');
+
+    return `
+      <div class="stock-card">
+        <div class="card-rank">PICK #${i+1} ${s.source_article ? '· ' + s.source_article.substring(0,40) + '…' : ''}</div>
+        <div class="card-ticker">${s.ticker || '—'}</div>
+        <div class="card-company">${s.name || ''}</div>
+        <div class="card-reason">${s.reason || ''}</div>
+        ${signalTags ? `<div class="card-signals">${signalTags}</div>` : ''}
+        ${metrics.length > 0 ? `<div class="card-metrics">${metricsHtml}</div>` : ''}
+      </div>`;
+  }).join('');
+
+  block.innerHTML = `
+    <div class="site-result-head">
+      <div class="site-name-group">
+        <div class="site-name">${source.name}</div>
+        <div class="site-meta">${source.url} &nbsp;·&nbsp; ${period} &nbsp;·&nbsp; ${countryF}</div>
+      </div>
+      <div class="site-badges">
+        <span class="badge badge-green">✓ ${stocks.length} PICKS</span>
+        <span class="badge badge-accent">LIVE</span>
+      </div>
+    </div>
+    <div class="stocks-row">${stocksHtml || '<div style="padding:20px;color:var(--muted)">결과 없음</div>'}</div>`;
+
+  container.appendChild(block);
+}
+
+// ===================================================
+// MAIN SCAN
+// ===================================================
+async function startScan() {
+  if (state.scanning) return;
+  if (state.sources.size === 0) { alert('최소 1개 소스를 선택하세요.'); return; }
+  if (state.keywords.size === 0) { alert('최소 1개 키워드를 선택하세요.'); return; }
+
+  state.scanning = true;
+  const btn = document.getElementById('scan-btn');
+  btn.disabled = true;
+  btn.textContent = '◌ SCANNING…';
+
+  // Reset
+  document.getElementById('results-container').innerHTML = '';
+  document.getElementById('log-inner').innerHTML = '';
+  document.getElementById('progress-wrap').classList.add('show');
+  document.getElementById('log-panel').classList.add('show');
+  setProgress(0, '초기화...');
+
+  const sources = SOURCES_CONFIG.filter(s => state.sources.has(s.id));
+  let done = 0;
+  let ok = 0;
+
+  addLog(`🚀 UNDERVAULT v2 스캔 시작 — ${sources.length}개 소스`, 'info');
+  addLog(`키워드: ${[...state.keywords].length}개 · 기간: ${PERIODS.find(p=>p.v===state.period)?.label} · 국가: ${[...state.countries].join(', ')}`, 'info');
+
+  for (const src of sources) {
+    addLog(`▶ ${src.name} 스캔 중...`);
+    setProgress(done / sources.length * 100, `${src.name} 분석 중...`);
+
+    try {
+      const data = await fetchForSource(src);
+      renderResult(src, data);
+      ok++;
+      addLog(`✓ ${src.name} — ${data.stocks?.length || 0}개 종목 확인`, 'ok');
+    } catch(e) {
+      renderResult(src, null, e.message);
+      addLog(`✗ ${src.name} — ${e.message}`, 'err');
+    }
+
+    done++;
+    setProgress(done / sources.length * 100);
+    if (done < sources.length) await delay(1500);
+  }
+
+  setProgress(100, '완료');
+
+  const ts = new Date().toLocaleString('ko-KR');
+  document.getElementById('res-badge').textContent = `${sources.length}개 소스 · ${ok}개 성공 · ${ts}`;
+  addLog(`🏁 스캔 완료 — ${ok}/${sources.length} 성공`, 'info');
+
+  state.scanning = false;
+  btn.disabled = false;
+  btn.textContent = '↺ RE-SCAN';
+}
+
+function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// ===================================================
+// BOOT
+// ===================================================
+window.addEventListener('DOMContentLoaded', () => {
+  init();
+
+  // Attach tab listeners after DOM ready
+  document.querySelectorAll('.kw-tab').forEach(t => {
+    t.addEventListener('click', () => {
+      state.kwTab = t.dataset.cat;
+      renderKeywords();
+    });
+  });
+});
+</script>
+</body>
+</html>
